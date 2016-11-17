@@ -20,8 +20,10 @@ import com.tamic.novate.BaseSubscriber;
 import com.tamic.novate.DownLoadCallBack;
 import com.tamic.novate.Novate;
 import com.tamic.novate.Throwable;
+import com.tamic.novate.util.FileUtil;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collection;
@@ -31,8 +33,10 @@ import java.util.Set;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import retrofit2.http.PartMap;
 
 /**
  * Created by Tamic on 2016-06-15.
@@ -278,7 +282,7 @@ public class ExempleActivity extends AppCompatActivity {
          * 如果不需要数据解析后返回 则调用novate.Get()
          * 参考 performPost()中的方式
          */
-        novate.executePost("service/getIpInfo.php", parameters, new Novate.ResponseCallBack<NovateResponse<ResultModel>>() {
+        novate.executeGet("service/getIpInfo.php", parameters, new Novate.ResponseCallBack<NovateResponse<ResultModel>>() {
             @Override
             public void onStart() {
 
@@ -304,7 +308,6 @@ public class ExempleActivity extends AppCompatActivity {
 
         });
 
-
     }
 
     /**
@@ -321,7 +324,6 @@ public class ExempleActivity extends AppCompatActivity {
                 .addLog(true)
                 .build();
 
-
         /**
          *
          *
@@ -331,11 +333,6 @@ public class ExempleActivity extends AppCompatActivity {
          * 参考 performGet()中的方式
          */
         novate.post("service/getIpInfo.php", parameters, new BaseSubscriber<ResponseBody>(ExempleActivity.this) {
-/*
-            @Override
-            public void onNext(IpResult ipResult) {
-
-            }*/
 
             @Override
             public void onError(Throwable e) {
@@ -406,10 +403,12 @@ public class ExempleActivity extends AppCompatActivity {
      */
     private void performUpLoadImage() {
 
-        String mPath = "you File path ";
+
         String url = "";
+        String str = FileUtil.loadFromAssets(this, "novate.png");
+
         RequestBody requestFile =
-                RequestBody.create(MediaType.parse("image/jpg"), new File(mPath));
+                RequestBody.create(MediaType.parse("image/jpg"), str);
 
         novate.upload(url, requestFile, new BaseSubscriber<ResponseBody>(ExempleActivity.this) {
             @Override
@@ -422,35 +421,11 @@ public class ExempleActivity extends AppCompatActivity {
 
             }
         });
-    }
 
-    /**
-     * upload
-     */
-    private void performUpLoadFlie() {
+        // or
 
         String mPath = "you File path ";
-        String url = "";
-
-        File file = new File(mPath);
-
-        // 创建 RequestBody，用于封装 请求RequestBody
-        RequestBody requestFile =
-                RequestBody.create(MediaType.parse("multipart/form-data"), file);
-
-         // MultipartBody.Part is used to send also the actual file name
-        MultipartBody.Part body =
-                MultipartBody.Part.createFormData("image", file.getName(), requestFile);
-
-       // 添加描述
-        String descriptionString = "hello, 这是文件描述";
-        RequestBody description =
-                RequestBody.create(
-                        MediaType.parse("multipart/form-data"), descriptionString);
-
-        // 执行
-
-        novate.uploadFlie(url, description,  body,new BaseSubscriber<ResponseBody>(ExempleActivity.this) {
+        novate.uploadImage(url, new File(mPath), new BaseSubscriber<ResponseBody>(ExempleActivity.this) {
             @Override
             public void onError(Throwable e) {
                 Toast.makeText(ExempleActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -462,6 +437,55 @@ public class ExempleActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    /**
+     * upload
+     */
+    private void performUpLoadFlie() {
+
+       // String mPath = "file:///android_asset/novate-config.json";
+        String url = "";
+        String str = FileUtil.loadFromAssets(this, "novate.png");
+        File file = new File(str);
+
+        // 创建 RequestBody，用于封装 请求RequestBody
+        RequestBody requestFile =
+                RequestBody.create(MediaType.parse("image"), str);
+
+         // MultipartBody.Part is used to send also the actual file name
+        MultipartBody.Part body =
+                MultipartBody.Part.createFormData("multipart/form-data", "novate.png", requestFile);
+
+       // 添加描述
+        String descriptionString = "hello, 这是文件描述";
+        RequestBody description =
+                RequestBody.create(
+                        MediaType.parse("multipart/form-data; charset=utf-8"), descriptionString);
+
+        novate.uploadFlie(url, description,  body, new BaseSubscriber<ResponseBody>(ExempleActivity.this) {
+            @Override
+            public void onError(Throwable e) {
+                Toast.makeText(ExempleActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNext(ResponseBody responseBody) {
+
+            }
+        });
+
+
+    }
+
+    private void performUpLoadFlies() {
+
+        String str = FileUtil.loadFromAssets(this, "novate.png");
+        String url = "";
+
+        // 创建 RequestBody，用于封装 请求RequestBody
+        RequestBody requestFile =
+                RequestBody.create(MediaType.parse("image"), str);
 
         Map<String, RequestBody> maps = new HashMap<>();
         maps.put("file1", requestFile);
