@@ -2,10 +2,11 @@ package com.tamic.novate;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
 import com.tamic.novate.Exception.ConfigLoader;
 import com.tamic.novate.Exception.FormatException;
 import com.tamic.novate.Exception.NovateException;
@@ -126,26 +127,7 @@ public final class Novate {
                 .subscribe(subscriber);
     }
 
-    /**
-     * Retroift execute get
-     * <p>
-     * return parsed data
-     * <p>
-     * you don't need to parse ResponseBody
-     */
-    public <T> T executeGet(final String url, final Map<String, String> maps, final ResponseCallBack<T> callBack) {
 
-        final Type[] types = callBack.getClass().getGenericInterfaces();
-        if (MethodHandler(types) == null || MethodHandler(types).size() == 0) {
-            return null;
-        }
-        final Type finalNeedType = MethodHandler(types).get(0);
-        Log.d(TAG, "-->:" + "Type:" + types[0]);
-        return (T) apiManager.executeGet(url, maps)
-                .compose(schedulersTransformer)
-                .compose(handleErrTransformer())
-                .subscribe(new NovateSubscriber<T>(mContext, finalNeedType, callBack));
-    }
 
     /**
      * MethodHandler
@@ -208,14 +190,14 @@ public final class Novate {
         else return exceptTransformer = new Observable.Transformer() {
             @Override
             public Object call(Object observable) {
-                return ((Observable) observable)/*.map(new HandleFuc<T>())*/.onErrorResumeNext(new HttpResponseFunc<T>());
+                return ((Observable) observable)/*.map(new HandleFuc<T>())*/.onErrorResumeNext(new HttpResponseFunc<NovateResponse<T>>());
             }
         };
     }
 
-    private static class HttpResponseFunc<T> implements Func1<java.lang.Throwable, Observable<T>> {
+    private static class HttpResponseFunc<T> implements Func1<java.lang.Throwable, Observable<NovateResponse<T>>> {
         @Override
-        public Observable<T> call(java.lang.Throwable t) {
+        public Observable<NovateResponse<T>> call(java.lang.Throwable t) {
             return Observable.error(NovateException.handleException(t));
         }
     }
@@ -223,14 +205,14 @@ public final class Novate {
     private class HandleFuc<T> implements Func1<NovateResponse<T>, T> {
         @Override
         public T call(NovateResponse<T> response) {
-            if (response == null || (response.getData() == null && response.getResult() == null)) {
+           /* if (response == null || (response.getData() == null && response.getResult() == null)) {
                 throw new JsonParseException("后端数据不对");
             }
-            /*if (!response.isOk()) {
+            *//*if (!response.isOk()) {
                 throw new RuntimeException(response.getCode() + "" + response.getMsg() != null ? response.getMsg() : "");
-            }
-*/
-            return response.getData();
+            }*/
+
+            return response.getData() == null ? response.getResult() : null;
         }
     }
 
@@ -248,6 +230,28 @@ public final class Novate {
                 .compose(schedulersTransformer)
                 .compose(handleErrTransformer())
                 .subscribe(subscriber);
+    }
+
+    /**
+     * Retroift execute get
+     * <p>
+     * return parsed data
+     * <p>
+     * you don't need to parse ResponseBody
+     */
+    public <T> T executeGet(final String url, final Map<String, String> maps, final ResponseCallBack<T> callBack) {
+
+        final Type[] types = callBack.getClass().getGenericInterfaces();
+        if (MethodHandler(types) == null || MethodHandler(types).size() == 0) {
+            return null;
+        }
+        final Type finalNeedType = MethodHandler(types).get(0);
+
+        Log.d(TAG, "-->:" + "Type:" + types[0] + "  parse:"+ finalNeedType);
+        return (T) apiManager.executeGet(url, maps)
+                .compose(schedulersTransformer)
+                .compose(handleErrTransformer())
+                .subscribe(new NovateSubscriber<T>(mContext, finalNeedType, callBack));
     }
 
     /**
@@ -1169,23 +1173,38 @@ public final class Novate {
                          *  Type finalNeedType = needChildType;
                          */
 
-                        NovateResponse<T> baseResponse = null;
+                        Type type = new TypeToken<NovateResponse<T>>() {
+                        }.getType();
 
-                        if (new Gson().fromJson(jsStr, finalNeedType) == null) {
+                        NovateResponse<T> baseResponse = new Gson().fromJson(jsStr, type);
+
+                       if (baseResponse == null) {
                             throw new NullPointerException();
                         }
-                        baseResponse = new Gson().fromJson(jsStr, finalNeedType);
-                        if (ConfigLoader.isFormat(mContext) && baseResponse.getData() == null & baseResponse.getResult() == null) {
+
+                     /*  if (new Gson().fromJson(jsStr, finalNeedType) == null) {
+                            throw new NullPointerException();
+                        }*/
+
+
+                        T data = new Gson().fromJson(new Gson().toJson(baseResponse.getData()), finalNeedType);
+
+                        if (data == null) {
+                            data = new Gson().fromJson(new Gson().toJson(baseResponse.getResult()), finalNeedType);
+                        }
+
+                        String responsemsg =
+                                baseResponse.getMsg() != null ? baseResponse.getMsg() : baseResponse.getError() != null ?
+                                        baseResponse.getError() : baseResponse.getMessage() != null ? baseResponse.getMessage() : "api约定未知的异常";
+
+                        if (ConfigLoader.isFormat(mContext) && TextUtils.isEmpty(responsemsg)) {
                             throw new FormatException();
                         }
 
                         if (baseResponse.isOk(mContext)) {
-                            callBack.onSuccee((T) new Gson().fromJson(jsStr, finalNeedType));
+                            callBack.onSuccee(data);
                         } else {
-                            String msg =
-                                    baseResponse.getMsg() != null ? baseResponse.getMsg() : baseResponse.getError() != null ? baseResponse.getError() : baseResponse.getMessage() != null ? baseResponse.getMessage() : "api未知异常";
-
-                            ServerException serverException = new ServerException(baseResponse.getCode(), msg);
+                            ServerException serverException = new ServerException(baseResponse.getCode(), responsemsg);
                             callBack.onError(NovateException.handleException(serverException));
                         }
 

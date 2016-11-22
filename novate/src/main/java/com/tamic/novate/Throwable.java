@@ -1,5 +1,6 @@
 package com.tamic.novate;
 
+
 /**
  * Created by Tamic on 2016-11-03.
  */
@@ -10,8 +11,13 @@ public class Throwable extends Exception {
     private String message;
 
     public Throwable(java.lang.Throwable throwable, int code) {
+       this(throwable, code, "网络错误");
+    }
+
+    public Throwable(java.lang.Throwable throwable, int code, String msg) {
         super(throwable);
         this.code = code;
+        this.message = msg;
     }
 
     public int getCode() {
