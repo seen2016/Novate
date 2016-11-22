@@ -166,15 +166,16 @@ public class ExempleActivity extends AppCompatActivity {
      */
     private void performTest() {
 
+
         //http://apis.baidu.com/apistore/weatherservice/cityname?cityname=上海
         Map<String, String> headers = new HashMap<>();
-        headers.put("apikey", "27b6fb21f2b42e9d70cd722b2ed038a9");
-        headers.put("Accept", "application/json");
+       /* headers.put("apikey", "27b6fb21f2b42e9d70cd722b2ed038a9");
+        headers.put("Accept", "application/json");*/
         novate = new Novate.Builder(this)
-                .addHeader(headers)
-                .addParameters(parameters)
+                //.addHeader(headers)
+                //.addParameters(parameters)
                 .connectTimeout(5)
-                .baseUrl("https://apis.baidu.com/")
+                .baseUrl("http://apis.baidu.com/")
                 .addHeader(headers)
                 .addLog(true)
                 .build();
@@ -258,7 +259,7 @@ public class ExempleActivity extends AppCompatActivity {
 
        Map<String, String> parameters = new HashMap<String, String>();
         parameters.put("ip", "21.22.11.33");
-        novate = new Novate.Builder(this)
+        Novate novate = new Novate.Builder(this)
                 .addHeader(headers)
                 //.addParameters(parameters)
                 .connectTimeout(5)
@@ -282,7 +283,7 @@ public class ExempleActivity extends AppCompatActivity {
          * 如果不需要数据解析后返回 则调用novate.Get()
          * 参考 performPost()中的方式
          */
-        novate.executeGet("service/getIpInfo.php", parameters, new Novate.ResponseCallBack<NovateResponse<ResultModel>>() {
+        novate.executeGet("service/getIpInfo.php", parameters, new Novate.ResponseCallBack<ResultModel>() {
             @Override
             public void onStart() {
 
@@ -301,8 +302,8 @@ public class ExempleActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onSuccee(NovateResponse<ResultModel> response) {
-                Toast.makeText(ExempleActivity.this, response.getData().toString(), Toast.LENGTH_SHORT).show();
+            public void onSuccee(ResultModel response) {
+                Toast.makeText(ExempleActivity.this, response.toString(), Toast.LENGTH_SHORT).show();
             }
 
 
